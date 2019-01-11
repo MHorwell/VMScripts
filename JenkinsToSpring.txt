@@ -1,0 +1,20 @@
+#!/bin/bash
+PROJECT="spring-boot-hello-world"
+mvn clean package
+INSTALL_FOLDER="~/${PROJECT}"
+
+ssh -T jenkins@10.0.0.11 << EOF
+	mkdir -p "~/${PROJECT}"
+    rm -rf ${INSTALL_FOLDER}/*
+EOF
+
+scp target/hello-world*.jar jenkins@10.0.0.11:"~/${PROJECT}".jar
+
+ssh -T jenkins@10.0.0.11 << EOF
+PID_FILE= "~/${PROJECT}/PID"
+OLD_PID=$(cat ${PID_FILE})
+kill -9 ${OLD_PID}
+BUILD_ID=dontKillMe java -jar "~/${PROJECT}".jar 2>&1 &
+echo $! > ${PID_FILE}
+disown
+EOF
